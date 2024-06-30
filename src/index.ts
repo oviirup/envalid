@@ -3,6 +3,7 @@ import { object } from "zod";
 import type { TypeOf, ZodError, ZodObject, ZodType } from "zod";
 
 const CLIENT_PREFIX = "NEXT_PUBLIC_" as const;
+
 type TPrefix = typeof CLIENT_PREFIX;
 type TRecord = Record<string, ZodType>;
 type ErrorMessage<T extends string> = T;
@@ -65,16 +66,28 @@ export interface BaseOptions<
   skipValidation?: boolean;
 }
 
-export interface LooseOptions<
+interface StrictOptions<
+  TServer extends TRecord,
+  TClient extends TRecord,
   TShared extends TRecord,
   TExtends extends Array<Record<string, unknown>>,
 > extends BaseOptions<TShared, TExtends> {
-  /**
-   * What object holds the environment variables at runtime. This is usually
-   * `process.env` or `import.meta.env`.
-   */
-  // Unlike `runtimeEnvStrict`, this doesn't enforce that all environment variables are set.
-  runtimeEnv: Record<string, string | boolean | number | undefined>;
+  runtimeEnv: Record<
+    | {
+        [TKey in keyof TClient]: TKey extends `${TPrefix}${string}`
+          ? TKey
+          : never;
+      }[keyof TClient]
+    | {
+        [TKey in keyof TServer]: TKey extends `${TPrefix}${string}`
+          ? never
+          : TKey;
+      }[keyof TServer]
+    | {
+        [TKey in keyof TShared]: TKey extends string ? TKey : never;
+      }[keyof TShared],
+    string | boolean | number | undefined
+  >;
 }
 
 export interface ClientOptions<TClient extends TRecord> {
@@ -85,9 +98,7 @@ export interface ClientOptions<TClient extends TRecord> {
   client: Partial<{
     [TKey in keyof TClient]: TKey extends `${TPrefix}${string}`
       ? TClient[TKey]
-      : ErrorMessage<`${TKey extends string
-          ? TKey
-          : never} is not prefixed with ${TPrefix}.`>;
+      : ErrorMessage<`${TKey extends string ? TKey : never} is not prefixed with ${TPrefix}.`>;
   }>;
 }
 
@@ -98,9 +109,7 @@ export interface ServerOptions<TServer extends TRecord> {
    */
   server: Partial<{
     [TKey in keyof TServer]: TKey extends `${TPrefix}${string}`
-      ? ErrorMessage<`${TKey extends `${TPrefix}${string}`
-          ? TKey
-          : never} should not prefixed with ${TPrefix}.`>
+      ? ErrorMessage<`${TKey extends `${TPrefix}${string}` ? TKey : never} should not prefixed with ${TPrefix}.`>
       : TServer[TKey];
   }>;
 }
@@ -118,7 +127,8 @@ export type EnvOptions<
   TClient extends TRecord,
   TShared extends TRecord,
   TExtends extends Array<Record<string, unknown>>,
-> = LooseOptions<TShared, TExtends> & ServerClientOptions<TServer, TClient>;
+> = StrictOptions<TServer, TClient, TShared, TExtends> &
+  ServerClientOptions<TServer, TClient>;
 
 type TServerFormat = TRecord;
 type TClientFormat = TRecord;
@@ -151,7 +161,7 @@ export function envalid<
   TServer extends TServerFormat = NonNullable<unknown>,
   TClient extends TClientFormat = NonNullable<unknown>,
   TShared extends TSharedFormat = NonNullable<unknown>,
-  TExtends extends TExtendsFormat = [],
+  const TExtends extends TExtendsFormat = [],
 >(
   opts: EnvOptions<TServer, TClient, TShared, TExtends>,
 ): CreateEnv<TServer, TClient, TShared, TExtends> {
@@ -159,7 +169,8 @@ export function envalid<
 
   // remove empty strings from runtime env
   for (const [key, value] of Object.entries(runtimeEnv)) {
-    if (value === "") {
+    if (value && value === "") {
+      // @ts-ignore
       delete runtimeEnv[key];
     }
   }
