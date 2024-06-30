@@ -1,6 +1,6 @@
 {
   "name": "@oviirup/envalid",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Validate environment variables with zod in Next.JS",
   "repository": {
