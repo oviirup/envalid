@@ -1,0 +1,6 @@
+.changeset
+.github
+.husky
+.prettierrc
+src
+!dist
