@@ -1,7 +1,6 @@
 {
   "name": "@oviirup/envalid",
   "version": "0.1.2",
-  "type": "module",
   "description": "Validate environment variables with zod in Next.JS",
   "repository": {
     "type": "git",
@@ -10,14 +9,17 @@
   "author": "Avirup Ghosh",
   "license": "MIT",
   "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "default": "./dist/index.js",
+      "import": "./dist/index.mjs"
     },
     "./presets": {
       "types": "./dist/presets.d.ts",
-      "default": "./dist/presets.js"
+      "default": "./dist/presets.js",
+      "import": "./dist/presets.mjs"
     }
   },
   "files": [
